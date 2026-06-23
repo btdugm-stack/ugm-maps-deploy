@@ -75,38 +75,39 @@
 <div class="app">
   <aside>
     <section class="brand">
-      <small>🗺️ UGM Facility Maps</small>
-      <h1>Direktori Maps Fasilitas Universitas Gadjah Mada</h1>
-      <p>Visualisasi titik fasilitas dari file Excel: searchable, filterable, dan siap deploy statis.</p>
+      <small>🗺️ Peta Interaktif</small>
+      <h1>Direktori Fasilitas Universitas Gadjah Mada</h1>
+      <p>Jelajahi lokasi fakultas, gedung akademik, layanan kampus, dan fasilitas lainnya di lingkungan UGM dengan mudah melalui peta interaktif ini.</p>
     </section>
     <section class="stats">
-      <div class="stat"><strong id="totalStat">0</strong><span>Total fasilitas</span></div>
-      <div class="stat"><strong id="visibleStat">0</strong><span>Tampil di map</span></div>
+      <div class="stat"><strong id="totalStat">0</strong><span>Total Fasilitas</span></div>
+      <div class="stat"><strong id="visibleStat">0</strong><span>Ditampilkan</span></div>
       <div class="stat"><strong id="catStat">0</strong><span>Kategori</span></div>
-      <div class="stat"><strong id="coordStat">0</strong><span>Berkoordinat</span></div>
+      <div class="stat"><strong id="coordStat">0</strong><span>Lokasi Valid</span></div>
     </section>
     <section class="controls">
-      <label for="searchBox">Cari fasilitas</label>
-      <input id="searchBox" placeholder="Contoh: GIK, Kantin, Fisipol..." />
-      <label for="categoryFilter">Filter kategori</label>
+      <label for="searchBox">Cari Fasilitas</label>
+      <input id="searchBox" placeholder="Ketik nama fakultas, gedung, atau layanan..." />
+      <label for="categoryFilter">Kategori Fasilitas</label>
       <select id="categoryFilter"><option value="all">Semua kategori</option></select>
       <label style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;font-size:13px;color:#334155;margin:2px 0 12px;cursor:pointer">
-        <input id="includeExtended" type="checkbox" style="width:auto;margin:0" /> Tampilkan fasilitas ekstensi/luar kampus utama
+        <input id="includeExtended" type="checkbox" style="width:auto;margin:0" /> Tampilkan lokasi di luar kampus utama
       </label>
       <div class="btnrow">
-        <button class="primary" id="fitBtn">Fit ke UGM</button>
-        <button class="ghost" id="resetBtn">Reset filter</button>
-        <a class="btn ghost" href="facilities.json" target="_blank" rel="noopener noreferrer">JSON</a>
-        <a class="btn ghost" href="facilities.geojson" target="_blank" rel="noopener noreferrer">GeoJSON</a>
+        <button class="primary" id="fitBtn">Tampilkan Semua</button>
+        <button class="ghost" id="resetBtn">Reset</button>
       </div>
-      <div class="footer-note">Base map menggunakan OpenStreetMap. Koordinat diekstrak dari link Maps di Excel; aplikasi ini tidak melakukan scraping Google Maps.</div>
+      <div class="footer-note">
+        <strong>Tentang Data:</strong><br>
+        Peta ini menampilkan 98 fasilitas Universitas Gadjah Mada yang tersebar di Yogyakarta. Data koordinat diperoleh dari informasi Google Maps yang tersedia secara publik. Anda dapat menjelajahi peta dengan cara klik marker atau pilih fasilitas dari daftar di bawah.
+      </div>
     </section>
     <div class="list-title"><h2>Daftar Fasilitas</h2><span id="listCount">0 item</span></div>
     <section class="facility-list" id="facilityList"></section>
   </aside>
   <main>
     <div id="map"></div>
-    <div class="topbar"><div class="map-pill" id="mapInfo">Memuat data fasilitas...</div></div>
+    <div class="topbar"><div class="map-pill" id="mapInfo">Memuat peta fasilitas UGM...</div></div>
     <div class="legend" id="legend"><h3>Legenda Kategori</h3></div>
     <section class="drawer" id="drawer">
       <button class="close" id="closeDrawer" aria-label="Tutup detail">×</button>
@@ -159,7 +160,7 @@ function initFilters(meta) {
     div.innerHTML = `<span class="legend-color" style="background:${colorFor(cat)}"></span><span>${esc(cat)}</span>`;
     legend.appendChild(div);
   });
-  $('mapInfo').textContent = `${allFacilities.length} fasilitas dimuat • ${cats.length} kategori • ${allFacilities.filter(f => f.campus_scope === 'kampus_utama').length} di kampus utama`;
+  $('mapInfo').textContent = `${allFacilities.length} fasilitas tersedia di ${cats.length} kategori • ${allFacilities.filter(f => f.campus_scope === 'kampus_utama').length} lokasi di kampus utama`;
 }
 function applyFilters() {
   const q = $('searchBox').value.trim().toLowerCase();
@@ -186,7 +187,7 @@ function renderMarkers() {
 }
 function renderList() {
   const list = $('facilityList'); list.innerHTML='';
-  if (!filtered.length) { list.innerHTML='<div class="empty">Data tidak ditemukan. Coba reset filter.</div>'; return; }
+  if (!filtered.length) { list.innerHTML='<div class="empty">Tidak ada fasilitas yang sesuai dengan pencarian Anda. Silakan coba kata kunci lain atau klik tombol Reset.</div>'; return; }
   filtered.forEach(f => {
     const card = document.createElement('article'); card.className='facility-card' + (f.id===activeId?' active':''); card.dataset.id=f.id;
     card.innerHTML = `<span class="tag" style="background:${colorFor(f.category)}"><span class="dot"></span>${esc(f.category)}</span><h3>${esc(f.name)}</h3><p>${esc(f.description || 'Tidak ada deskripsi.')}</p>`;
@@ -204,18 +205,14 @@ window.showDetail = function(id, pan=true) {
   $('drawerContent').innerHTML = `
     <span class="tag" style="background:${colorFor(f.category)}"><span class="dot"></span>${esc(f.category)}</span>
     <h2>${esc(f.name)}</h2>
-    <p>${esc(f.description || 'Belum ada deskripsi singkat.')}</p>
+    <p>${esc(f.description || 'Informasi deskripsi untuk fasilitas ini belum tersedia.')}</p>
     <div class="meta">
-      <div><b>Latitude</b><span>${esc(f.latitude)}</span></div>
-      <div><b>Longitude</b><span>${esc(f.longitude)}</span></div>
-      <div><b>ID</b><span>${esc(f.id)}</span></div>
-      <div><b>Baris Excel</b><span>${esc(f.source_row)}</span></div>
-      <div><b>Scope</b><span>${esc(f.campus_scope_label || '-')}</span></div>
+      <div><b>Koordinat</b><span>${esc(f.latitude)}, ${esc(f.longitude)}</span></div>
+      <div><b>Lokasi</b><span>${esc(f.campus_scope_label || 'Kampus UGM')}</span></div>
     </div>
     <div class="btnrow">
-      ${f.maps_url ? `<a class="btn ghost" href="${esc(f.maps_url)}" target="_blank" rel="noopener noreferrer">Buka Maps</a>` : ''}
-      ${f.website_url ? `<a class="btn ghost" href="${esc(f.website_url)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}
-      <a class="btn ghost" href="https://www.openstreetmap.org/?mlat=${f.latitude}&mlon=${f.longitude}#map=18/${f.latitude}/${f.longitude}" target="_blank" rel="noopener noreferrer">Buka OSM</a>
+      ${f.maps_url ? `<a class="btn ghost" href="${esc(f.maps_url)}" target="_blank" rel="noopener noreferrer">Buka di Google Maps</a>` : ''}
+      ${f.website_url ? `<a class="btn ghost" href="${esc(f.website_url)}" target="_blank" rel="noopener noreferrer">Kunjungi Website</a>` : ''}
     </div>`;
   $('drawer').classList.add('show');
 }
@@ -233,7 +230,7 @@ $('resetBtn').addEventListener('click', () => { $('searchBox').value=''; $('cate
 $('closeDrawer').addEventListener('click', () => $('drawer').classList.remove('show'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('drawer').classList.remove('show'); });
 setupMap();
-loadData().then(() => setTimeout(fitToData, 250)).catch(err => { console.error(err); $('mapInfo').textContent='Gagal memuat facilities.json'; });
+loadData().then(() => setTimeout(fitToData, 250)).catch(err => { console.error(err); $('mapInfo').textContent='Maaf, terjadi kesalahan saat memuat data. Silakan refresh halaman.'; });
 </script>
 </body>
 </html>
