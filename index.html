@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <!-- Geocoder for search functionality -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <!-- Fullscreen mode -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-fullscreen/dist/leaflet.fullscreen.css" />
   <style>
     :root {
       --bg:#f6f7fb; --card:#ffffff; --text:#172033; --muted:#64748b; --line:#e5e7eb;
@@ -117,6 +121,10 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<!-- Geocoder for search -->
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<!-- Fullscreen support -->
+<script src="https://unpkg.com/leaflet-fullscreen/dist/Leaflet.fullscreen.js"></script>
 <script>
 const CATEGORY_COLORS = {"Administrasi Keuangan": "#2563eb", "Administrasi Universitas": "#059669", "Akademik": "#dc2626", "Akomodasi": "#7c3aed", "Akomodasi Mahasiswa": "#ea580c", "Fakultas": "#0891b2", "Fasilitas Kesehatan": "#be123c", "Gedung Akademik": "#4f46e5", "Gedung Olahraga": "#16a34a", "Gedung Serbaguna": "#ca8a04", "Infrastruktur Utilitas": "#9333ea", "Kantin": "#0f766e", "Kantor Fakultas": "#b45309", "Kantor Layanan": "#64748b", "Layanan Administrasi": "#2563eb", "Layanan Akademik": "#059669", "Layanan Mahasiswa": "#dc2626", "Layanan Teknologi Informasi": "#7c3aed", "Pembelajaran Praktik": "#ea580c", "Perpustakaan Arsip": "#0891b2", "Perpustakaan Fakultas": "#be123c", "Pusat Kebudayaan": "#4f46e5", "Pusat Studi": "#16a34a", "Retail Kuliner": "#ca8a04", "Ruang Acara": "#9333ea", "Ruang Kolaborasi": "#0f766e", "Ruang Publik": "#b45309", "Ruang Terbuka": "#64748b", "Tempat Ibadah": "#2563eb", "Toilet": "#059669", "Unit Akademik": "#dc2626"};
 const FALLBACK_COLOR = '#334155';
@@ -129,13 +137,55 @@ function makeIcon(category) {
   return L.divIcon({className:'', iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24], html:`<div class="pin" style="background:${color}"><span></span></div>`});
 }
 function setupMap() {
-  map = L.map('map', {zoomControl: true}).setView([-7.7708604, 110.3778693], 15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd'
-  }).addTo(map);
+  map = L.map('map', {zoomControl: true, fullscreenControl: true}).setView([-7.7708604, 110.3778693], 15);
+  
+  // Define tile layer providers (OpenStreetMap integration)
+  const tileLayers = {
+    'CARTO Light': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd'
+    }),
+    'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abc'
+    }),
+    'Stamen Terrain': L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png', {
+      maxZoom: 18,
+      attribution: 'Map tiles by <a href="https://stadiamaps.com/">Stadia Maps</a>, Map data by <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd'
+    }),
+    'Stamen Toner': L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      attribution: 'Map tiles by <a href="https://stadiamaps.com/">Stadia Maps</a>, Map data by <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd'
+    })
+  };
+  
+  // Set default tile layer (CARTO Light)
+  tileLayers['CARTO Light'].addTo(map);
+  
+  // Add layer control for tile switching
+  L.control.layers(tileLayers, null, {position: 'topright', collapsed: true}).addTo(map);
+  
   cluster = L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:45}).addTo(map);
+  
+  // Add geocoder (search) control
+  L.Control.geocoder({
+    defaultMarkGeocode: false,
+    position: 'topleft',
+    placeholder: 'Cari lokasi...'
+  }).on('markgeocode', function(e) {
+    const bbox = e.geocode.bbox;
+    const poly = L.polygon([
+      [bbox.getSouthEast().lat, bbox.getSouthWest().lng],
+      [bbox.getNorthEast().lat, bbox.getSouthWest().lng],
+      [bbox.getNorthEast().lat, bbox.getNorthWest().lng],
+      [bbox.getSouthWest().lat, bbox.getNorthWest().lng]
+    ]);
+    map.fitBounds(poly.getBounds());
+  }).addTo(map);
 }
 function validCoord(f) { return Number.isFinite(f.latitude) && Number.isFinite(f.longitude); }
 async function loadData() {
