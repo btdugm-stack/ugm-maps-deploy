@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Direktori Maps Fasilitas UGM</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    :root {
+      --bg:#f6f7fb; --card:#ffffff; --text:#172033; --muted:#64748b; --line:#e5e7eb;
+      --brand:#0f3f77; --brand2:#f6b42d; --accent:#0ea5e9;
+      --shadow:0 18px 50px rgba(15, 23, 42, .11);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .app{display:grid;grid-template-columns:410px 1fr;min-height:100vh}
+    aside{background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);border-right:1px solid var(--line);padding:18px;overflow:auto;max-height:100vh}
+    .brand{background:linear-gradient(135deg,var(--brand),#123d6b 52%,#062848);color:white;border-radius:22px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+    .brand:after{content:"";position:absolute;right:-65px;top:-65px;width:180px;height:180px;border-radius:999px;background:rgba(246,180,45,.25)}
+    .brand small{display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.14);padding:7px 10px;border-radius:999px;font-weight:700}
+    .brand h1{font-size:25px;line-height:1.12;margin:16px 0 8px;letter-spacing:-.03em}
+    .brand p{margin:0;color:rgba(255,255,255,.82);font-size:13px;line-height:1.55}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+    .stat{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:13px;box-shadow:0 9px 26px rgba(15,23,42,.06)}
+    .stat strong{display:block;font-size:23px;color:var(--brand);line-height:1}
+    .stat span{font-size:12px;color:var(--muted)}
+    .controls{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:13px;margin-bottom:14px;box-shadow:0 9px 26px rgba(15,23,42,.05)}
+    label{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    input,select{width:100%;border:1px solid #d6dbe3;border-radius:13px;padding:12px;margin:7px 0 12px;font:inherit;background:white;color:var(--text);outline:none}
+    input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(14,165,233,.12)}
+    .btnrow{display:flex;gap:9px;flex-wrap:wrap}
+    button,.btn{border:0;border-radius:13px;padding:10px 12px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    button.primary{background:var(--brand);color:white}
+    button.ghost,.btn.ghost{background:#eef2f7;color:#0f172a}
+    .list-title{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 10px}
+    .list-title h2{font-size:15px;margin:0}
+    .list-title span{font-size:12px;color:var(--muted)}
+    .facility-list{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+    .facility-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:13px;box-shadow:0 10px 25px rgba(15,23,42,.05);cursor:pointer;transition:.18s ease}
+    .facility-card:hover{transform:translateY(-2px);box-shadow:0 16px 35px rgba(15,23,42,.10);border-color:#bfdbfe}
+    .facility-card.active{outline:3px solid rgba(14,165,233,.28);border-color:#38bdf8}
+    .facility-card h3{font-size:14px;margin:0 0 6px;line-height:1.25}
+    .facility-card p{margin:0;color:#64748b;font-size:12px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .tag{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 8px;color:white;font-size:11px;font-weight:800;margin-bottom:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:white;opacity:.88}
+    main{position:relative;min-height:100vh}
+    #map{position:absolute;inset:0;z-index:1}
+    .topbar{position:absolute;z-index:500;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+    .map-pill{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid rgba(226,232,240,.92);border-radius:999px;padding:10px 14px;box-shadow:var(--shadow);font-size:13px;color:#334155;pointer-events:auto}
+    .drawer{position:absolute;z-index:520;right:18px;bottom:18px;width:min(440px,calc(100% - 36px));background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow);display:none}
+    .drawer.show{display:block}
+    .drawer h2{font-size:20px;margin:0 0 8px;line-height:1.2;letter-spacing:-.02em}
+    .drawer p{color:#475569;font-size:13px;line-height:1.6}
+    .drawer .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+    .meta div{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:10px}
+    .meta b{display:block;font-size:11px;text-transform:uppercase;color:#64748b;margin-bottom:4px}
+    .meta span{font-size:13px;font-weight:700}
+    .close{position:absolute;top:12px;right:12px;background:#eef2f7;width:34px;height:34px;border-radius:999px;padding:0}
+    .leaflet-popup-content-wrapper{border-radius:16px;box-shadow:var(--shadow)}
+    .pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 5px 15px rgba(0,0,0,.25);border:2px solid #fff}
+    .pin span{display:block;width:8px;height:8px;border-radius:999px;background:white;margin:7px auto;opacity:.9}
+    .legend{position:absolute;z-index:510;left:16px;bottom:16px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);max-width:330px;max-height:220px;overflow:auto}
+    .legend h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px;color:#64748b}
+    .legend-item{display:flex;align-items:center;gap:8px;font-size:12px;margin:7px 0;color:#334155}
+    .legend-color{width:12px;height:12px;border-radius:999px;flex:0 0 12px}
+    .empty{padding:18px;border:1px dashed #cbd5e1;border-radius:16px;text-align:center;color:#64748b;background:#f8fafc}
+    .footer-note{font-size:11px;color:#64748b;line-height:1.5;margin-top:12px}
+    @media(max-width:920px){.app{grid-template-columns:1fr}aside{max-height:none}main{min-height:68vh}#map{min-height:68vh}.legend{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <section class="brand">
+      <small>🗺️ UGM Facility Maps</small>
+      <h1>Direktori Maps Fasilitas Universitas Gadjah Mada</h1>
+      <p>Visualisasi titik fasilitas dari file Excel: searchable, filterable, dan siap deploy statis.</p>
+    </section>
+    <section class="stats">
+      <div class="stat"><strong id="totalStat">0</strong><span>Total fasilitas</span></div>
+      <div class="stat"><strong id="visibleStat">0</strong><span>Tampil di map</span></div>
+      <div class="stat"><strong id="catStat">0</strong><span>Kategori</span></div>
+      <div class="stat"><strong id="coordStat">0</strong><span>Berkoordinat</span></div>
+    </section>
+    <section class="controls">
+      <label for="searchBox">Cari fasilitas</label>
+      <input id="searchBox" placeholder="Contoh: GIK, Kantin, Fisipol..." />
+      <label for="categoryFilter">Filter kategori</label>
+      <select id="categoryFilter"><option value="all">Semua kategori</option></select>
+      <label style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;font-size:13px;color:#334155;margin:2px 0 12px;cursor:pointer">
+        <input id="includeExtended" type="checkbox" style="width:auto;margin:0" /> Tampilkan fasilitas ekstensi/luar kampus utama
+      </label>
+      <div class="btnrow">
+        <button class="primary" id="fitBtn">Fit ke UGM</button>
+        <button class="ghost" id="resetBtn">Reset filter</button>
+        <a class="btn ghost" href="facilities.json" target="_blank" rel="noopener noreferrer">JSON</a>
+        <a class="btn ghost" href="facilities.geojson" target="_blank" rel="noopener noreferrer">GeoJSON</a>
+      </div>
+      <div class="footer-note">Base map menggunakan OpenStreetMap. Koordinat diekstrak dari link Maps di Excel; aplikasi ini tidak melakukan scraping Google Maps.</div>
+    </section>
+    <div class="list-title"><h2>Daftar Fasilitas</h2><span id="listCount">0 item</span></div>
+    <section class="facility-list" id="facilityList"></section>
+  </aside>
+  <main>
+    <div id="map"></div>
+    <div class="topbar"><div class="map-pill" id="mapInfo">Memuat data fasilitas...</div></div>
+    <div class="legend" id="legend"><h3>Legenda Kategori</h3></div>
+    <section class="drawer" id="drawer">
+      <button class="close" id="closeDrawer" aria-label="Tutup detail">×</button>
+      <div id="drawerContent"></div>
+    </section>
+  </main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const CATEGORY_COLORS = {"Administrasi Keuangan": "#2563eb", "Administrasi Universitas": "#059669", "Akademik": "#dc2626", "Akomodasi": "#7c3aed", "Akomodasi Mahasiswa": "#ea580c", "Fakultas": "#0891b2", "Fasilitas Kesehatan": "#be123c", "Gedung Akademik": "#4f46e5", "Gedung Olahraga": "#16a34a", "Gedung Serbaguna": "#ca8a04", "Infrastruktur Utilitas": "#9333ea", "Kantin": "#0f766e", "Kantor Fakultas": "#b45309", "Kantor Layanan": "#64748b", "Layanan Administrasi": "#2563eb", "Layanan Akademik": "#059669", "Layanan Mahasiswa": "#dc2626", "Layanan Teknologi Informasi": "#7c3aed", "Pembelajaran Praktik": "#ea580c", "Perpustakaan Arsip": "#0891b2", "Perpustakaan Fakultas": "#be123c", "Pusat Kebudayaan": "#4f46e5", "Pusat Studi": "#16a34a", "Retail Kuliner": "#ca8a04", "Ruang Acara": "#9333ea", "Ruang Kolaborasi": "#0f766e", "Ruang Publik": "#b45309", "Ruang Terbuka": "#64748b", "Tempat Ibadah": "#2563eb", "Toilet": "#059669", "Unit Akademik": "#dc2626"};
+const FALLBACK_COLOR = '#334155';
+let map, cluster, allFacilities = [], filtered = [], markerById = new Map(), facilityById = new Map(), activeId = null;
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const colorFor = cat => CATEGORY_COLORS[cat] || FALLBACK_COLOR;
+function makeIcon(category) {
+  const color = colorFor(category);
+  return L.divIcon({className:'', iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24], html:`<div class="pin" style="background:${color}"><span></span></div>`});
+}
+function setupMap() {
+  map = L.map('map', {zoomControl: true}).setView([-7.7708604, 110.3778693], 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd'
+  }).addTo(map);
+  cluster = L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:45}).addTo(map);
+}
+function validCoord(f) { return Number.isFinite(f.latitude) && Number.isFinite(f.longitude); }
+async function loadData() {
+  const res = await fetch('facilities.json');
+  const payload = await res.json();
+  allFacilities = payload.facilities || [];
+  allFacilities.forEach(f => facilityById.set(f.id, f));
+  filtered = allFacilities.filter(validCoord).filter(f => f.campus_scope !== 'ekstensi_luar_kampus_utama');
+  initFilters(payload.metadata || {});
+  renderAll();
+}
+function initFilters(meta) {
+  $('totalStat').textContent = allFacilities.length;
+  $('coordStat').textContent = allFacilities.filter(validCoord).length;
+  const cats = [...new Set(allFacilities.map(f => f.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  $('catStat').textContent = cats.length;
+  const sel = $('categoryFilter');
+  cats.forEach(cat => { const opt = document.createElement('option'); opt.value = cat; opt.textContent = cat; sel.appendChild(opt); });
+  const legend = $('legend');
+  cats.forEach(cat => {
+    const div = document.createElement('div'); div.className='legend-item';
+    div.innerHTML = `<span class="legend-color" style="background:${colorFor(cat)}"></span><span>${esc(cat)}</span>`;
+    legend.appendChild(div);
+  });
+  $('mapInfo').textContent = `${allFacilities.length} fasilitas dimuat • ${cats.length} kategori • ${allFacilities.filter(f => f.campus_scope === 'kampus_utama').length} di kampus utama`;
+}
+function applyFilters() {
+  const q = $('searchBox').value.trim().toLowerCase();
+  const cat = $('categoryFilter').value;
+  filtered = allFacilities.filter(f => validCoord(f)).filter(f => {
+    const text = `${f.name} ${f.category} ${f.description}`.toLowerCase();
+    const qok = !q || text.includes(q);
+    const cok = cat === 'all' || f.category === cat;
+    const scopeOk = $('includeExtended').checked || f.campus_scope !== 'ekstensi_luar_kampus_utama';
+    return qok && cok && scopeOk;
+  });
+  renderAll();
+}
+function renderAll() { renderMarkers(); renderList(); $('visibleStat').textContent = filtered.length; $('listCount').textContent = `${filtered.length} item`; }
+function renderMarkers() {
+  cluster.clearLayers(); markerById.clear();
+  filtered.forEach(f => {
+    const marker = L.marker([f.latitude, f.longitude], {icon: makeIcon(f.category)});
+    marker.bindPopup(`<b>${esc(f.name)}</b><br><span>${esc(f.category)}</span><br><button onclick="window.showDetail('${f.id}')" style="margin-top:8px;border:0;border-radius:9px;padding:7px 10px;background:#0f3f77;color:#fff;font-weight:700;cursor:pointer">Detail</button>`);
+    marker.on('click', () => showDetail(f.id));
+    markerById.set(f.id, marker);
+    cluster.addLayer(marker);
+  });
+}
+function renderList() {
+  const list = $('facilityList'); list.innerHTML='';
+  if (!filtered.length) { list.innerHTML='<div class="empty">Data tidak ditemukan. Coba reset filter.</div>'; return; }
+  filtered.forEach(f => {
+    const card = document.createElement('article'); card.className='facility-card' + (f.id===activeId?' active':''); card.dataset.id=f.id;
+    card.innerHTML = `<span class="tag" style="background:${colorFor(f.category)}"><span class="dot"></span>${esc(f.category)}</span><h3>${esc(f.name)}</h3><p>${esc(f.description || 'Tidak ada deskripsi.')}</p>`;
+    card.onclick = () => showDetail(f.id, true);
+    list.appendChild(card);
+  });
+}
+window.showDetail = function(id, pan=true) {
+  const f = facilityById.get(id); if (!f) return;
+  activeId = id;
+  document.querySelectorAll('.facility-card.active').forEach(el => el.classList.remove('active'));
+  const card = document.querySelector(`.facility-card[data-id="${id}"]`);
+  if (card) { card.classList.add('active'); card.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+  if (pan && validCoord(f)) { map.setView([f.latitude, f.longitude], Math.max(map.getZoom(), 17), {animate:true}); const m=markerById.get(id); if(m) m.openPopup(); }
+  $('drawerContent').innerHTML = `
+    <span class="tag" style="background:${colorFor(f.category)}"><span class="dot"></span>${esc(f.category)}</span>
+    <h2>${esc(f.name)}</h2>
+    <p>${esc(f.description || 'Belum ada deskripsi singkat.')}</p>
+    <div class="meta">
+      <div><b>Latitude</b><span>${esc(f.latitude)}</span></div>
+      <div><b>Longitude</b><span>${esc(f.longitude)}</span></div>
+      <div><b>ID</b><span>${esc(f.id)}</span></div>
+      <div><b>Baris Excel</b><span>${esc(f.source_row)}</span></div>
+      <div><b>Scope</b><span>${esc(f.campus_scope_label || '-')}</span></div>
+    </div>
+    <div class="btnrow">
+      ${f.maps_url ? `<a class="btn ghost" href="${esc(f.maps_url)}" target="_blank" rel="noopener noreferrer">Buka Maps</a>` : ''}
+      ${f.website_url ? `<a class="btn ghost" href="${esc(f.website_url)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}
+      <a class="btn ghost" href="https://www.openstreetmap.org/?mlat=${f.latitude}&mlon=${f.longitude}#map=18/${f.latitude}/${f.longitude}" target="_blank" rel="noopener noreferrer">Buka OSM</a>
+    </div>`;
+  $('drawer').classList.add('show');
+}
+function fitToData() {
+  const pts = filtered.filter(validCoord).map(f => [f.latitude, f.longitude]);
+  if (!pts.length) return;
+  map.fitBounds(pts, {padding:[42,42], maxZoom:17});
+}
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+$('searchBox').addEventListener('input', debounce(applyFilters, 200));
+$('categoryFilter').addEventListener('change', applyFilters);
+$('includeExtended').addEventListener('change', applyFilters);
+$('fitBtn').addEventListener('click', fitToData);
+$('resetBtn').addEventListener('click', () => { $('searchBox').value=''; $('categoryFilter').value='all'; $('includeExtended').checked=false; applyFilters(); fitToData(); });
+$('closeDrawer').addEventListener('click', () => $('drawer').classList.remove('show'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('drawer').classList.remove('show'); });
+setupMap();
+loadData().then(() => setTimeout(fitToData, 250)).catch(err => { console.error(err); $('mapInfo').textContent='Gagal memuat facilities.json'; });
+</script>
+</body>
+</html>
